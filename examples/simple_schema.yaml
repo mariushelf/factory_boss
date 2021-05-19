@@ -1,0 +1,80 @@
+# schema without references etc
+entities:
+  Person:
+    fields:
+      person_id:
+          type: string
+          value_type: id
+          primary_key: true
+      name:
+          type: string
+          faker: name
+      birthday:
+          type: date
+          faker:
+            date_of_birth:
+              minimum_age: 0
+              maximum_age: 115
+      age:
+        type: integer
+        null_rate: .3
+        faker:
+          pyint:
+            min_value: 0
+            max_value: 115
+      address_string:
+          type: string
+      current_address:
+          type: relation
+          relation_type: mt1
+          to: Address.address_id
+          local_field: address_id
+          relation_strategy: pick_random
+          remote_name: persons
+      address_history:
+          type: relation
+          to: AdressHistory.id
+          local_field: adress_history_id
+          remote_name: person
+          relation_type: 1tm
+          relation_strategy: create(0, 5)
+      partner:
+          type: relation
+          to: Person.person_id
+          relation_type: 1t1
+          remote_name: partner
+          local_field: partner_id
+  Address:
+    fields:
+      address_id:
+        type: integer
+        value_type: id
+      postcode:
+        type: string
+        faker: postcode
+      postcode4:
+        type: string
+      street:
+        type: string
+        faker: street_name
+      housenumber:
+        type: integer
+        faker: building_number
+      full_address:
+        type: string
+        faker: street_address
+  AddressHistory:
+    fields:
+      id:
+        type: integer
+        value_type: id
+        primary_key: True
+      address:
+        type: relation
+        relation_type: 1tm
+        to: Address.address_id
+        local_field: address_id
+      date_start:
+        type: date
+      date_end:
+        type: date

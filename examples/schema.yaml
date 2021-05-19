@@ -1,0 +1,108 @@
+constants:
+  NOW:
+    value_type: date
+    value: 2021-05-01
+  EIGHTEEN_YR_AGO:
+    value_type: date
+    value: 2003-05-01
+  BEGINNING:
+    value_type: date
+    value: 1920-01-01
+entities:
+  Person:
+    fields:
+      person_id:
+          type: string
+          value_type: id
+          primary_key: true
+      name:
+          type: string
+          faker: name
+      birthday:
+          type: date
+          faker:
+            date_of_birth:
+              minimum_age: $age
+              maximum_age: $age
+      age:
+        type: integer
+        null_rate: .3
+        faker:
+          pyint:
+            min_value: 0
+            max_value: 115
+      address_string:
+          type: string
+          value: $current_address.full_address
+      current_address:
+          type: relation
+          relation_type: mt1
+          to: Address.address_id
+          local_field: address_id
+          relation_strategy: pick_random
+          remote_name: persons
+      address_history:
+          type: relation
+          to: AdressHistory.id
+          remote_name: person
+          relation_type: 1tm
+          relation_strategy: create(0, 5)
+          relation_overrides:
+            date_start: $PREV.date_end
+            LAST.address: $current_address
+      partner:
+          type: relation
+          to: Person.person_id
+          relation_type: 1t1
+          remote_name: partner
+          local_field: partner_id
+          relation_overrides:
+            address: $address
+            age:
+              faker:
+                pyint:
+                  min_value: 18
+                  max_value: 115
+  Address:
+    fields:
+      address_id:
+        type: integer
+        value_type: id
+      postcode:
+        type: string
+        faker: postcode
+      postcode4:
+        type: string
+        value: $postcode[:4]
+      street:
+        type: string
+        faker: street_name
+      housenumber:
+        type: integer
+        faker: building_number
+      full_address:
+        type: string
+        value: ${postcode} $street $housenumber
+  AddressHistory:
+    fields:
+      id:
+        type: integer
+        value_type: id
+        primary_key: True
+      address:
+        type: relation
+        relation_type: 1tm
+        to: Address.address_id
+        local_field: address_id
+      date_start:
+        type: date
+        faker:
+          date_between:
+            start_date: $BEGINNING
+            end_date: $NOW
+      date_end:
+        type: date
+        faker:
+          date_between:
+            start_date: $date_start
+            end_date: $NOW

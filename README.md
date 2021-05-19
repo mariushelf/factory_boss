@@ -1,9 +1,8 @@
-# factoryboss
+# Factory Boss
 
+Fake entire data schemas. Easily.
 
-Fake entire data schemas.
-
-Original repository: [https://github.com/mariushelf/factoryboss](https://github.com/mariushelf/factoryboss)
+Original repository: [https://github.com/mariushelf/factory_boss](https://github.com/mariushelf/factory_boss)
 
 # Generation Process
 

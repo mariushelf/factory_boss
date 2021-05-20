@@ -24,6 +24,7 @@ entities:
             max_value: 115
       address_string:
           type: string
+          value: $current_address.full_address
       current_address:
           type: relation
           relation_type: mt1

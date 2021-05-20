@@ -1,4 +1,5 @@
 import random
+from graphlib import TopologicalSorter
 from pprint import pprint
 from typing import Dict, List
 
@@ -14,11 +15,15 @@ class Generator:
         instances = self.make_instances()
         pprint(instances)
         self.make_relations(instances)
+        self.resolve_references(instances)
         plan = self.make_plan(instances)
-        for ivalue in plan:
-            ivalue.make_value()
+        self.execute_plan(plan)
         dicts = self.instances_to_dict(instances)
         return dicts
+
+    def execute_plan(self, plan):
+        for ivalue in plan:
+            ivalue.make_value()
 
     def instances_to_dict(self, instances: Dict[str, List[Instance]]):
         dicts = {}
@@ -49,23 +54,48 @@ class Generator:
                 for rel in instance.relations():
                     if rel.spec.relation_type == "1tm":
                         # TODO
-                        pass
+                        raise NotImplementedError("1tm relation")
                     elif rel.spec.relation_type == "1t1":
                         # TODO
-                        pass
+                        raise NotImplementedError("1t1 relation")
                     elif rel.spec.relation_type == "mt1":
                         possible_targets = instances[rel.spec.target_entity]
                         target = random_element(possible_targets)
                         instance.instance_values[rel.name].override_value(target)
 
-    def make_plan(self, instances) -> List[InstanceValue]:
-        # TODO resolve dependencies
-        """ Return evaluation order of instance values """
-        plan = []
+    def resolve_references(self, instances):
+        def resolve(tokens, context):
+            if len(tokens) == 1:
+                return context.instance_values[tokens[0]]
+            else:
+                context = context.instance_values[tokens[0]]
+                return resolve(tokens[1:], context.value())
+
+        print("RESOLVING")
         for ename, einstances in instances.items():
             for instance in einstances:
                 for ivalue in instance.instance_values.values():
-                    plan.append(ivalue)
+                    for ref in ivalue.spec.references():
+                        target = ref.target
+                        tokens = target.split(".")
+                        # print(f"Resolving {tokens} in {instance}")
+                        resolved_target = resolve(tokens, instance)
+                        ref.resolve_to(resolved_target)
+                        print(f"resolved {ref} to {resolved_target}")
+
+    def make_plan(self, instances) -> List[InstanceValue]:
+        # TODO resolve dependencies
+        """ Return evaluation order of instance values """
+        sorter = TopologicalSorter()
+        for ename, einstances in instances.items():
+            for instance in einstances:
+                for ivalue in instance.instance_values.values():
+                    # print(ivalue.name, ivalue.spec.references())
+                    references = ivalue.spec.references()
+                    dependencies = [ref.resolved_target for ref in references]
+                    sorter.add(ivalue, *dependencies)
+        plan = sorter.static_order()
+        plan = list(plan)
         return plan
 
 

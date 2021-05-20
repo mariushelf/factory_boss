@@ -1,19 +1,39 @@
+import re
 from typing import Any, Dict, List
 
 from faker import Faker
 
 from factory_boss.context import Context
-from factory_boss.errors import ConfigurationError
+from factory_boss.errors import (
+    ConfigurationError,
+    InvalidReferenceError,
+    UnresolvedReferenceError,
+)
 from factory_boss.instance import InstanceValue, ManyToOneRelationValue
 
 fake = Faker()
 
 
-class Reference:
+class CodeToken:
+    def value(self):
+        raise NotImplementedError
+
+
+class Reference(CodeToken):
     """ Reference to another ValueSpec """
 
     def __init__(self, target: str):
         self.target: str = target
+        self.resolved_target: InstanceValue = None
+
+    def resolve_to(self, target: InstanceValue):
+        self.resolved_target = target
+
+    def value(self):
+        if self.resolved_target is None:
+            raise UnresolvedReferenceError(self)
+        else:
+            return self.resolved_target.value()
 
     def __str__(self):
         return f"Reference({self.target})"
@@ -22,16 +42,30 @@ class Reference:
         return str(self)
 
 
+class Literal(CodeToken):
+    """ not a valuespec! """
+
+    def __init__(self, value):
+        self._value = value
+
+    def value(self):
+        return self._value
+
+
 class ValueSpec:
     def __init__(self, type: str):
         self.type = type
+        self._references: List[Reference] = []
 
     def generate_value(self, context: Context) -> Any:
         return None  # TODO raise instead
         # raise NotImplementedError(f"Not implemented for {self}")
 
     def references(self) -> List["Reference"]:
-        return []
+        return self._references
+
+    def add_reference(self, ref: Reference):
+        self._references.append(ref)
 
     def spawn_value(self, name, owner):
         return InstanceValue(name=name, spec=self, owner=owner)
@@ -47,21 +81,39 @@ class Constant(ValueSpec):
 
 
 class DynamicField(ValueSpec):
-    def __init__(self, code: str, type):
+    def __init__(self, code, type):
         super().__init__(type=type)
-        self.code = str(code)
+        self.code = code
+        self.ast = None
+        self.parse()
 
-    def references(self):
+    def parse(self) -> List:
+        ast: List[CodeToken] = []
         if isinstance(self.code, str):
             tokens = self.code.split(" ")
-            refs = []
             for t in tokens:
+                if len(ast) > 0:
+                    ast.append(Literal(" "))
                 if t.startswith("$"):
-                    ref = Reference(t[1:])
-                    refs.append(ref)
-            return refs
+                    pattern = r"\$([a-zA-Z_][\w\.]*\w).*"
+                    m = re.match(pattern, t)
+                    if m is None:
+                        raise InvalidReferenceError(t)
+                    ref = Reference(m[1])
+                    self.add_reference(ref)
+                    ast.append(ref)
+                else:
+                    ast.append(Literal(t))
         else:
-            return []
+            return [Literal(self.code)]
+        self.ast = ast
+        return ast
+
+    def generate_value(self, context: Context) -> Any:
+        if len(self.ast) == 1:
+            return self.ast[0].value()
+        else:
+            return "".join([str(v.value()) for v in self.ast])
 
 
 class FakerField(ValueSpec):

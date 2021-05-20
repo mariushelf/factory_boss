@@ -3,13 +3,12 @@ from typing import Any, Dict, List
 
 from faker import Faker
 
-from factory_boss.context import Context
 from factory_boss.errors import (
     ConfigurationError,
     InvalidReferenceError,
     UnresolvedReferenceError,
 )
-from factory_boss.instance import InstanceValue, ManyToOneRelationValue
+from factory_boss.instance import InstanceValue  # , ManyToOneRelationValue
 
 fake = Faker()
 
@@ -24,22 +23,28 @@ class Reference(CodeToken):
 
     def __init__(self, target: str):
         self.target: str = target
-        self.resolved_target: InstanceValue = None
 
-    def resolve_to(self, target: InstanceValue):
-        self.resolved_target = target
-
-    def value(self):
-        if self.resolved_target is None:
-            raise UnresolvedReferenceError(self)
-        else:
-            return self.resolved_target.value()
+    def resolve_to(self, target: InstanceValue) -> "ResolvedReference":
+        return ResolvedReference(self, target)
 
     def __str__(self):
         return f"Reference({self.target})"
 
     def __repr__(self):
         return str(self)
+
+
+class ResolvedReference(Reference):
+    def __init__(self, reference: Reference, resolved_target: InstanceValue):
+        super().__init__(reference.target)
+        self.parent = reference
+        self.resolved_target: InstanceValue = resolved_target
+
+    def value(self):
+        if self.resolved_target is None:
+            raise UnresolvedReferenceError(self)
+        else:
+            return self.resolved_target.value()
 
 
 class Literal(CodeToken):
@@ -57,7 +62,9 @@ class ValueSpec:
         self.type = type
         self._references: List[Reference] = []
 
-    def generate_value(self, context: Context) -> Any:
+    def generate_value(
+        self, resolved_references: Dict[Reference, ResolvedReference]
+    ) -> Any:
         return None  # TODO raise instead
         # raise NotImplementedError(f"Not implemented for {self}")
 
@@ -76,7 +83,7 @@ class Constant(ValueSpec):
         super().__init__(type)
         self.value = value
 
-    def generate_value(self, context: Context):
+    def generate_value(self, resolved_references):
         return self.value
 
 
@@ -109,11 +116,14 @@ class DynamicField(ValueSpec):
         self.ast = ast
         return ast
 
-    def generate_value(self, context: Context) -> Any:
-        if len(self.ast) == 1:
-            return self.ast[0].value()
+    def generate_value(self, resolved_references) -> Any:
+        resolved_ast = [
+            resolved_references[v] if v in resolved_references else v for v in self.ast
+        ]
+        if len(resolved_ast) == 1:
+            return resolved_ast[0].value()
         else:
-            return "".join([str(v.value()) for v in self.ast])
+            return "".join([str(v.value()) for v in resolved_ast])
 
 
 class FakerField(ValueSpec):
@@ -137,7 +147,7 @@ class FakerField(ValueSpec):
             faker_func = fakespec
         return FakerField(spec["type"], faker_func, faker_kwargs)
 
-    def generate_value(self, context: Context):
+    def generate_value(self, resolved_references):
         f = getattr(fake, self.faker_func)
         # kwargs = {k: v.generate_value(context) for k, v in self.faker_kwargs.items()}
         kwargs = self.faker_kwargs
@@ -173,10 +183,10 @@ class RelationSpec(ValueSpec):
             local_field=local_field,
         )
 
-    def spawn_value(self, name, owner):
-        if self.relation_type == "mt1":
-            return ManyToOneRelationValue(name=name, spec=self, owner=owner)
-        else:
-            raise NotImplementedError(
-                f'Relation_type "{self.relation_type}" not yet implemented.'
-            )
+    # def spawn_value(self, name, owner):
+    #     if self.relation_type == "mt1":
+    #         return ManyToOneRelationValue(name=name, spec=self, owner=owner)
+    #     else:
+    #         raise NotImplementedError(
+    #             f'Relation_type "{self.relation_type}" not yet implemented.'
+    #         )

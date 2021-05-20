@@ -5,7 +5,7 @@ from typing import Dict
 from factory_boss.errors import UndefinedValueError
 
 if typing.TYPE_CHECKING:
-    from factory_boss.value_spec import RelationSpec, ValueSpec
+    from factory_boss.value_spec import Reference, ResolvedReference, ValueSpec
 
 
 class Instance:
@@ -46,6 +46,7 @@ class InstanceValue:
         self.spec = spec
         self._value = None
         self.defined = False
+        self._resolved_references: Dict[Reference, ResolvedReference] = {}
 
     def value(self):
         if self.defined:
@@ -55,7 +56,7 @@ class InstanceValue:
 
     def make_value(self):
         if not self.defined:
-            self._value = self.spec.generate_value(None)
+            self._value = self.spec.generate_value(self.resolved_references())
             self.defined = True
         return self._value
 
@@ -63,8 +64,14 @@ class InstanceValue:
         self._value = value
         self.defined = True
 
+    def add_resolved_reference(self, reference: "ResolvedReference"):
+        self._resolved_references[reference.parent] = reference
+
+    def resolved_references(self):
+        return self._resolved_references
+
     def __repr__(self):
-        return f"InstanceValue({self.name}, {self._value if self.defined else '<UNDEFINED>'})"
+        return f"InstanceValue_{id(self)}({self.name}, {self._value if self.defined else '<UNDEFINED>'})"
 
     # def push_value(self):
     #     """ Generate value and write it to its onwer """
@@ -72,14 +79,14 @@ class InstanceValue:
     #     self.owner[self.name] = value
 
 
-class ManyToOneRelationValue(InstanceValue):
-    def __init__(self, name: str, spec: "RelationSpec", owner: Instance):
-        super().__init__(name, spec, owner)
-
-    # def value(self):
-    #     return self.remote_instance
-
-    def push_value(self):
-        super().push_value()
-        self.owner[self.spec.local_field] = self.remote_instance[self.spec.target_key]
-        # self.remote_instance[self.spec.remote_name] = [self.owner]
+# class ManyToOneRelationValue(InstanceValue):
+#     def __init__(self, name: str, spec: "RelationSpec", owner: Instance):
+#         super().__init__(name, spec, owner)
+#
+#     # def value(self):
+#     #     return self.remote_instance
+#
+#     def push_value(self):
+#         super().push_value()
+#         self.owner[self.spec.local_field] = self.remote_instance[self.spec.target_key]
+#         # self.remote_instance[self.spec.remote_name] = [self.owner]

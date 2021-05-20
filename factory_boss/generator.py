@@ -80,7 +80,8 @@ class Generator:
                         tokens = target.split(".")
                         # print(f"Resolving {tokens} in {instance}")
                         resolved_target = resolve(tokens, instance)
-                        ref.resolve_to(resolved_target)
+                        resolved_ref = ref.resolve_to(resolved_target)
+                        ivalue.add_resolved_reference(resolved_ref)
                         print(f"resolved {ref} to {resolved_target}")
 
     def make_plan(self, instances) -> List[InstanceValue]:
@@ -91,7 +92,7 @@ class Generator:
             for instance in einstances:
                 for ivalue in instance.instance_values.values():
                     # print(ivalue.name, ivalue.spec.references())
-                    references = ivalue.spec.references()
+                    references = ivalue.resolved_references().values()
                     dependencies = [ref.resolved_target for ref in references]
                     sorter.add(ivalue, *dependencies)
         plan = sorter.static_order()

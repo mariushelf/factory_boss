@@ -1,4 +1,3 @@
-# schema without references etc
 entities:
   Person:
     fields:
@@ -39,22 +38,34 @@ entities:
 #          remote_name: person
 #          relation_type: 1tm
 #          relation_strategy: create(0, 5)
-#      partner:
-#          type: relation
-#          to: Person.person_id
-#          relation_type: 1t1
-#          remote_name: partner
-#          local_field: partner_id
+      partner:
+          type: relation
+          to: Person.person_id
+          relation_type: mt1
+          relation_strategy: create
+          remote_name: partner
+          local_field: partner_id
+          relation_overrides:
+            current_address: $current_address
+            partner: $SELF
+            age:
+              faker:
+                pyint:
+                  min_value: 18
+                  max_value: 115
   Address:
     fields:
       address_id:
         type: integer
-        value_type: id
+        faker:
+          pyint:
+            min_value: 0
       postcode:
         type: string
         faker: postcode
       postcode4:
         type: string
+        value: $postcode[:4]
       street:
         type: string
         faker: street_name

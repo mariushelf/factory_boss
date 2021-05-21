@@ -8,7 +8,7 @@ from factory_boss.errors import (
     InvalidReferenceError,
     UnresolvedReferenceError,
 )
-from factory_boss.instance import InstanceValue  # , ManyToOneRelationValue
+from factory_boss.instance import Instance, InstanceValue  # , ManyToOneRelationValue
 
 fake = Faker()
 
@@ -43,6 +43,8 @@ class ResolvedReference(Reference):
     def value(self):
         if self.resolved_target is None:
             raise UnresolvedReferenceError(self)
+        elif isinstance(self.resolved_target, Instance):
+            return self.resolved_target
         else:
             return self.resolved_target.value()
 
@@ -73,9 +75,6 @@ class ValueSpec:
 
     def add_reference(self, ref: Reference):
         self._references.append(ref)
-
-    def spawn_value(self, name, owner):
-        return InstanceValue(name=name, spec=self, owner=owner)
 
 
 class Constant(ValueSpec):
@@ -112,7 +111,7 @@ class DynamicField(ValueSpec):
                 else:
                     ast.append(Literal(t))
         else:
-            return [Literal(self.code)]
+            ast = [Literal(self.code)]
         self.ast = ast
         return ast
 
@@ -155,12 +154,19 @@ class FakerField(ValueSpec):
         return value
 
     def __repr__(self):
-        return f"{self.__class__.__name__}('{self.type}', '{self.faker_func}', {self.faker_kwargs})"
+        return f"FakerField({self.__class__.__name__}('{self.type}', '{self.faker_func}', {self.faker_kwargs})"
 
 
 class RelationSpec(ValueSpec):
     def __init__(
-        self, relation_type, local_field, target_entity, target_key, remote_name
+        self,
+        relation_type,
+        local_field,
+        target_entity,
+        target_key,
+        remote_name,
+        relation_strategy,
+        relation_overrides: Dict[str, ValueSpec],
     ):
         super().__init__(type="relation")
         self.target_entity = target_entity
@@ -168,6 +174,8 @@ class RelationSpec(ValueSpec):
         self.relation_type = relation_type
         self.target_key = target_key
         self.remote_name = remote_name
+        self.relation_strategy = relation_strategy
+        self.relation_overrides: Dict[str, ValueSpec] = relation_overrides
 
     @classmethod
     def create(cls, spec: Dict):
@@ -175,12 +183,16 @@ class RelationSpec(ValueSpec):
         target_entity, target_key = spec["to"].split(".")
         remote_name = spec.get("remote_name", None)
         local_field = spec["local_field"]
+        relation_strategy = spec.get("relation_strategy", "choose_random")
+        relation_overrides = spec.get("relation_overrides", {})
         return cls(
             relation_type=relation_type,
             target_entity=target_entity,
             target_key=target_key,
             remote_name=remote_name,
             local_field=local_field,
+            relation_strategy=relation_strategy,
+            relation_overrides=relation_overrides,
         )
 
     # def spawn_value(self, name, owner):

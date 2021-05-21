@@ -6,9 +6,10 @@ reference.10 : "$" _reference_body
 _reference_body : ref_element ("." ref_element)*
 ref_element.10 : element_name [element_access]
 element_name.10 : CNAME
-element_access.10 :  "[" _WS* slice _WS* "]"
-slice : index
-index : INT | SIGNED_INT
+element_access.10 :  "[" _WS* _element_accessor _WS* "]"
+_element_accessor : slice | index
+slice : [[SIGNED_INT ":"] SIGNED_INT] ":" [SIGNED_INT]
+index : SIGNED_INT
 
 literal.-1: (/[^$\\]+/ | _escape DOLLAR | _escaped_backslash )+
 DOLLAR: "$"
@@ -32,6 +33,6 @@ if __name__ == "__main__":
 
     parser = Lark(value_grammar, parser="earley")
 
-    code = r"$a[-56 ].b${ this.is.a.ref}fgds gfd $FIRST.x[1] \$test \\$test2 \\\$test3 \\\\$test4"
+    code = r"$a[-56: ].b${ this.is.a.ref}fgds gfd $FIRST.x[1] \$test \\$test2 \\\$test3 \\\\$test4"
     print(parser.parse(code))
     print(parser.parse(code).pretty())

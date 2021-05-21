@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Any, Dict
 
 from faker import Faker
 
@@ -31,7 +31,7 @@ class SpecParser:
         return entity
 
     @classmethod
-    def create_fields(cls, spec, name) -> Dict[str, ValueSpec]:
+    def create_fields(cls, spec: Dict[str, Any], name) -> Dict[str, ValueSpec]:
         if "faker" in spec:
             return {name: FakerField.create(spec)}
         elif "value" in spec:

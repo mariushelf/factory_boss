@@ -9,7 +9,7 @@ from factory_boss.errors import (
     InvalidReferenceError,
     UnresolvedReferenceError,
 )
-from factory_boss.instance import Instance, InstanceValue  # , ManyToOneRelationValue
+from factory_boss.instance import Instance, InstanceValue
 from factory_boss.spec_parser.value_spec_registry import ValueSpecRegistry
 
 logger = logging.getLogger(__name__)
@@ -187,7 +187,6 @@ class FakerField(ValueSpec):
 
     def generate_value(self, resolved_references):
         f = getattr(fake, self.faker_func)
-        # kwargs = {k: v.generate_value(context) for k, v in self.faker_kwargs.items()}
         kwargs = self.faker_kwargs
         value = f(**kwargs)
         return value

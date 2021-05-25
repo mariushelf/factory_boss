@@ -31,6 +31,12 @@ class Instance:
         return self
 
     def to_dict(self):
+        undefined_values = [n for n, v in self.instance_values.items() if not v.defined]
+        if undefined_values:
+            raise UndefinedValueError(
+                f"Cannot create dict because the following values of "
+                f"Instance('{self.entity.name}') are undefined: {undefined_values}"
+            )
         if self._dict is None:
             self._dict = {}
             for name, ivalue in self.instance_values.items():

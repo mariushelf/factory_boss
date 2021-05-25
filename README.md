@@ -7,16 +7,16 @@ Original repository: [https://github.com/mariushelf/factory_boss](https://github
 # Generation Process
 
 ```mermaid
-flowchart TB
-    P(Parser) -- generates --> ES[Entity specification]
-    ES --> FR(Field Resolver)
-    FR --> DG(DAGGenerator)
-    DG --> IG(Instance Generator)
-    IG -- produces --> I[Instance]
-    
-    G -.->|uses|R(Resolver)
-    R -.->|knows|Context
-    Context -.->|contains|C[Constants]
+graph TB
+    YAML -- load --> Dict --> P
+    ES[Entity and Value specifications]
+    P(Parser) -- generates --> ES
+    ES -- make_instances --> Instances
+    Instances -->|make relations| NI[Instances with Relations]
+    NI -->|make relations -- repeat for new instances| NI
+    NI --> |resolve_references|DAG[DAG / 'Plan']
+    DAG -->|execute_plan| IV[Instances with Values]
+    IV -->|to_dict| DICT[Output Dictionary]
 ```
 
 ## Entity Specification
@@ -29,9 +29,10 @@ DynamicField --|> Field
 DynamicField ..> Field : references
 ```
 
-## Instances
+# TODO
 
-An instance is represented as a dictionary from field name to value.
+Much much, above all documentation.
+
 
 # License
 

@@ -235,7 +235,6 @@ class RelationSpec(ValueSpec):
             spec_cls = ValueSpecRegistry.value_spec_cls_from_dict(v)
             specs_from_dict = spec_cls.create(v, k)
             extra = specs_from_dict.derived_fields()
-            print("EXTRA", extra)
             relation_overrides[k] = specs_from_dict
             relation_overrides.update(extra)
 
@@ -252,7 +251,6 @@ class RelationSpec(ValueSpec):
 
     def derived_fields(self) -> Dict[str, "ValueSpec"]:
         if self.relation_type == self.MANY_TO_ONE:
-            print(f"DERIVE {self.local_field} --> ${self.name}.{self.target_key}")
             return {
                 self.local_field: DynamicField(
                     code=f"${self.name}.{self.target_key}",

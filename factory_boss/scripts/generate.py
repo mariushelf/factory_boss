@@ -11,7 +11,6 @@ if __name__ == "__main__":
 
     parser = SpecParser()
     parsed_spec = parser.parse(schema)
-    pprint(parsed_spec)
 
     generator = Generator(parsed_spec)
     instances = generator.generate()

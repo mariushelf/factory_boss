@@ -10,13 +10,16 @@ Original repository: [https://github.com/mariushelf/factory_boss](https://github
 graph TB
     YAML -- load --> Dict --> P
     ES[Entity and Value specifications]
-    P(Parser) -- generates --> ES
-    ES -- make_instances --> Instances
-    Instances -->|make relations| NI[Instances with Relations]
-    NI -->|make relations -- repeat for new instances| NI
-    NI --> |resolve_references|DAG[DAG / 'Plan']
-    DAG -->|execute_plan| IV[Instances with Values]
-    IV -->|to_dict| DICT[Output Dictionary]
+    P(SpecParser) -- generates --> ES
+    ES -- "make_instances()" --> Instances
+    IR[Instances with Relations]
+    Instances --> make_relations("make_relations()")
+    make_relations --> IR
+    make_relations -- can result in --> NI[New Instances]
+    NI --> make_relations
+    IR --> |"resolve_references()"|DAG[DAG / 'Plan']
+    DAG -->|"execute_plan()"| IV[Instances with Values]
+    IV -->|"to_dict()"| DICT[Output Dictionary]
 ```
 
 ## Entity Specification

@@ -36,7 +36,7 @@ class Generator:
         new_instances = all_instances
         relation_maker = RelationMaker([], self.spec["entities"])
         while new_instances:
-            relation_maker.update_instances(new_instances)
+            relation_maker.add_known_instances(new_instances)
             new_instances = relation_maker.make_relations(new_instances)
             all_instances += new_instances
         return all_instances

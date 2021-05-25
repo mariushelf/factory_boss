@@ -10,18 +10,18 @@ from factory_boss.value_spec import RelationSpec
 
 
 class RelationMaker:
-    def __init__(self, all_instances: List[Instance], entities: Dict[str, Entity]):
-        self.all_instances: Dict[str, List[Instance]] = defaultdict(list)
-        self.update_instances(all_instances)
+    def __init__(self, known_instances: List[Instance], entities: Dict[str, Entity]):
+        self.known_instances: Dict[str, List[Instance]] = defaultdict(list)
+        self.add_known_instances(known_instances)
         self.entities = entities
 
-    def update_instances(self, new_instances):
+    def add_known_instances(self, new_instances):
         """Add new instances to this `RelationMaker`s known instances.
 
         This allows them, e.g., to be chosen as a target during a random pick.
         """
         for i in new_instances:
-            self.all_instances[i.entity.name].append(i)
+            self.known_instances[i.entity.name].append(i)
 
     def make_relations(self, instances) -> List[Instance]:
         all_new_instances = []
@@ -34,11 +34,11 @@ class RelationMaker:
         resolver = ReferenceResolver()
         all_new_instances = []
         for rel in instance.relations():
-            new_instances = self.make_relation(rel, resolver)
+            new_instances = self.make_one_relation(rel, resolver)
             all_new_instances += new_instances
         return all_new_instances
 
-    def make_relation(self, rel: InstanceValue, resolver) -> List[Instance]:
+    def make_one_relation(self, rel: InstanceValue, resolver) -> List[Instance]:
         if not isinstance(rel.spec, RelationSpec):
             # relation not defined as RelationSpec. This happens when
             # it is set via relation_overrides.
@@ -68,7 +68,7 @@ class RelationMaker:
     def make_one_to_many_relation(self, rel) -> Optional[Instance]:
         strat = rel.spec.relation_strategy
         if strat == "pick_random":
-            possible_targets = self.all_instances[rel.spec.target_entity]
+            possible_targets = self.known_instances[rel.spec.target_entity]
             target = self.random_element(possible_targets)
             rel.override_value(target)
             return None

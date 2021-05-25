@@ -1,6 +1,6 @@
 import random
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from factory_boss.entity import Entity
 from factory_boss.errors import ConfigurationError
@@ -16,6 +16,10 @@ class RelationMaker:
         self.entities = entities
 
     def update_instances(self, new_instances):
+        """Add new instances to this `RelationMaker`s known instances.
+
+        This allows them, e.g., to be chosen as a target during a random pick.
+        """
         for i in new_instances:
             self.all_instances[i.entity.name].append(i)
 
@@ -30,24 +34,36 @@ class RelationMaker:
         resolver = ReferenceResolver()
         all_new_instances = []
         for rel in instance.relations():
-            if not isinstance(rel.spec, RelationSpec):
-                # relation not defined as RelationSpec. This happens when
-                # it is set via relation_overrides.
-                self.resolve_overridden_relation(rel, resolver)
-            elif rel.spec.relation_type == RelationSpec.ONE_TO_MANY:
+            new_instances = self.make_relation(rel, resolver)
+            all_new_instances += new_instances
+        return all_new_instances
+
+    def make_relation(self, rel: InstanceValue, resolver) -> List[Instance]:
+        if not isinstance(rel.spec, RelationSpec):
+            # relation not defined as RelationSpec. This happens when
+            # it is set via relation_overrides.
+            self.resolve_overridden_relation(rel, resolver)
+            return []
+        else:
+            rel_type = rel.spec.relation_type
+            if rel_type == RelationSpec.ONE_TO_MANY:
                 # TODO
                 raise NotImplementedError("1tm relation")
             elif (
-                rel.spec.relation_type == RelationSpec.ONE_TO_ONE
-                or rel.spec.relation_type == RelationSpec.MANY_TO_ONE
+                rel_type == RelationSpec.ONE_TO_ONE
+                or rel_type == RelationSpec.MANY_TO_ONE
             ):
-                new_instances = self.make_one_to_many_relation(rel)
-                all_new_instances += new_instances
-        return all_new_instances
+                new_instance = self.make_one_to_many_relation(rel)
+                if new_instance:
+                    return [new_instance]
+                else:
+                    return []
+            else:
+                raise ConfigurationError(f"Unknown relation_type '{rel_type}'.")
 
-    def make_one_to_many_relation(self, rel):
-        new_instances = []
+    def make_one_to_many_relation(self, rel) -> Optional[Instance]:
         strat = rel.spec.relation_strategy
+        is_new_instance = False
         if strat == "pick_random":
             possible_targets = self.all_instances[rel.spec.target_entity]
             target = self.random_element(possible_targets)
@@ -58,7 +74,7 @@ class RelationMaker:
                 overrides,
                 override_context=rel.owner,
             )
-            new_instances.append(target)
+            is_new_instance = True
         else:
             raise ConfigurationError(
                 f"Invalid relation_strategy. "
@@ -66,7 +82,11 @@ class RelationMaker:
                 f"but got '{strat}' instead."
             )
         rel.override_value(target)
-        return new_instances
+
+        if is_new_instance:
+            return target
+        else:
+            return None
 
     def resolve_overridden_relation(
         self, rel: InstanceValue, resolver: ReferenceResolver

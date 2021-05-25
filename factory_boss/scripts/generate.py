@@ -17,13 +17,3 @@ if __name__ == "__main__":
     print("INSTANCES")
     print("=========")
     pprint(instances)
-    #
-    # for entity in entities:
-    #     for field in entity.fields:
-    #         print(field)
-    #
-    # print("Generated:")
-    # for entity in entities:
-    #     print(entity.name)
-    #     values = entity.generate()
-    #     print(values)

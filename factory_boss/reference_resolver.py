@@ -3,10 +3,9 @@ from factory_boss.instance import InstanceValue
 
 class ReferenceResolver:
     def resolve_references(self, instances):
-        for ename, einstances in instances.items():
-            for instance in einstances:
-                for ivalue in instance.instance_values.values():
-                    self.resolve_references_of_instance_value(ivalue)
+        for instance in instances:
+            for ivalue in instance.instance_values.values():
+                self.resolve_references_of_instance_value(ivalue)
 
     def resolve_references_of_instance_value(self, ivalue: InstanceValue):
         for ref in ivalue.unresolved_references():

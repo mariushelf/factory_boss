@@ -1,77 +1,106 @@
 import random
+from collections import defaultdict
 from typing import Dict, List
 
 from factory_boss.entity import Entity
 from factory_boss.errors import ConfigurationError
-from factory_boss.instance import Instance
+from factory_boss.instance import Instance, InstanceValue
 from factory_boss.reference_resolver import ReferenceResolver
 from factory_boss.value_spec import RelationSpec
 
 
 class RelationMaker:
-    def make_relations(
-        self, instances, all_instances, entities: Dict[str, Entity]
-    ) -> Dict[str, List[Instance]]:
-        new_instances: Dict[str, List[Instance]] = {}
+    def __init__(self, all_instances: List[Instance], entities: Dict[str, Entity]):
+        self.all_instances: Dict[str, List[Instance]] = defaultdict(list)
+        self.update_instances(all_instances)
+        self.entities = entities
+
+    def update_instances(self, new_instances):
+        for i in new_instances:
+            self.all_instances[i.entity.name].append(i)
+
+    def make_relations(self, instances) -> List[Instance]:
+        all_new_instances = []
+        for instance in instances:
+            new_instances = self.make_relations_for_instance(instance)
+            all_new_instances += new_instances
+        return all_new_instances
+
+    def make_relations_for_instance(self, instance) -> List[Instance]:
         resolver = ReferenceResolver()
-        for ename, einstances in instances.items():
-            new_instances[ename] = []
-            for instance in einstances:
-                for rel in instance.relations():
-                    if rel.defined:
-                        # relation already defined (probably via override). Skip.
-                        continue
-                    elif not isinstance(rel.spec, RelationSpec):
-                        #
-                        resolver.resolve_references_of_instance_value(rel)
-                        target = rel.make_value()
-                        if not isinstance(target, Instance):
-                            raise ConfigurationError(
-                                f"{instance.entity.name}.{rel.name}: "
-                                f"Overrides of relation fields must point to an Instance, not to an InstanceValue!"
-                            )
-                        expected_target_entity = instance.entity.fields[
-                            rel.name
-                        ].target_entity
-                        if not target.entity.name == expected_target_entity:
-                            raise ConfigurationError(
-                                f"Overrides of relation fields must point "
-                                f"to the same type of entity. "
-                                f'Expected "{expected_target_entity}" '
-                                f'but got "{target.entity.name}" '
-                                f'for "{instance.entity.name}.{rel.name}"!'
-                            )
-                        instance.instance_values[rel.name].override_value(target)
-                    elif rel.spec.relation_type == RelationSpec.ONE_TO_MANY:
-                        # TODO
-                        raise NotImplementedError("1tm relation")
-                    elif rel.spec.relation_type == RelationSpec.ONE_TO_ONE:
-                        # TODO
-                        raise NotImplementedError("1t1 relation")
-                    elif rel.spec.relation_type == RelationSpec.MANY_TO_ONE:
-                        # print(f"making relation for {ename}.{rel.name}")
-                        possible_targets = all_instances[rel.spec.target_entity]
-                        strat = rel.spec.relation_strategy
-                        if strat == "pick_random":
-                            target = random_element(possible_targets)
-                        elif strat == "create":
-                            overrides = rel.spec.relation_overrides
-                            entity = entities[rel.spec.target_entity]
-                            target = entity.make_instance(
-                                overrides,
-                                override_context=instance,
-                            )
-                            new_instances[ename].append(target)
-                        else:
-                            raise ConfigurationError(
-                                f'invalid relation_strategy "{strat}"'
-                            )
-                        instance.instance_values[rel.name].override_value(target)
+        all_new_instances = []
+        for rel in instance.relations():
+            if not isinstance(rel.spec, RelationSpec):
+                # relation not defined as RelationSpec. This happens when
+                # it is set via relation_overrides.
+                self.resolve_overridden_relation(rel, resolver)
+            elif rel.spec.relation_type == RelationSpec.ONE_TO_MANY:
+                # TODO
+                raise NotImplementedError("1tm relation")
+            elif (
+                rel.spec.relation_type == RelationSpec.ONE_TO_ONE
+                or rel.spec.relation_type == RelationSpec.MANY_TO_ONE
+            ):
+                new_instances = self.make_one_to_many_relation(rel)
+                all_new_instances += new_instances
+        return all_new_instances
+
+    def make_one_to_many_relation(self, rel):
+        new_instances = []
+        strat = rel.spec.relation_strategy
+        if strat == "pick_random":
+            possible_targets = self.all_instances[rel.spec.target_entity]
+            target = self.random_element(possible_targets)
+        elif strat == "create":
+            overrides = rel.spec.relation_overrides
+            entity = self.entities[rel.spec.target_entity]
+            target = entity.make_instance(
+                overrides,
+                override_context=rel.owner,
+            )
+            new_instances.append(target)
+        else:
+            raise ConfigurationError(
+                f"Invalid relation_strategy. "
+                f"Expected one of 'pick_random', 'create', "
+                f"but got '{strat}' instead."
+            )
+        rel.override_value(target)
         return new_instances
 
+    def resolve_overridden_relation(
+        self, rel: InstanceValue, resolver: ReferenceResolver
+    ) -> None:
+        """Resolve relation that is specified by a value that is not a `RelationValue`.
 
-def random_element(choices):
-    if len(choices) == 0:
-        raise ValueError("choices must not be empty")
-    ix = random.randint(0, len(choices) - 1)
-    return choices[ix]
+        This often happens for overridden relations.
+
+        This function makes a value for the `InstanceValue` and performs some sanity
+        checks.
+        """
+        # Let's extract its value...
+        resolver.resolve_references_of_instance_value(rel)
+        target = rel.make_value()
+        entity = rel.owner.entity
+        # ...and check that the value is an instance:
+        if not isinstance(target, Instance):
+            raise ConfigurationError(
+                f"{rel.owner.entity.name}.{rel.name}: "
+                f"Overrides of relation fields must point to an Instance, "
+                f"not to an InstanceValue!"
+            )
+
+        expected_target_entity = entity.fields[rel.name].target_entity
+        if not target.entity.name == expected_target_entity:
+            raise ConfigurationError(
+                f"Overrides of relation fields must point to the same type of entity. "
+                f'Expected "{expected_target_entity}" but got "{target.entity.name}" '
+                f'for "{entity.name}.{rel.name}"'
+            )
+
+    @staticmethod
+    def random_element(choices):
+        if len(choices) == 0:
+            raise ValueError("choices must not be empty")
+        ix = random.randint(0, len(choices) - 1)
+        return choices[ix]

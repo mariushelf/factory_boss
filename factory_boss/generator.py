@@ -9,10 +9,9 @@ from factory_boss.relation_maker import RelationMaker
 class Generator:
     def __init__(self, spec: Dict):
         self.spec = spec
-        self.relation_maker = RelationMaker()
         self.resolver = ReferenceResolver()
 
-    def generate(self) -> Dict[str, List[Instance]]:
+    def generate(self) -> Dict[str, List[Dict]]:
         """ Generate a dictionary from entity name to list of generated instances """
         instances = self.make_instances()
         instances = self.make_relations(instances)
@@ -22,38 +21,34 @@ class Generator:
         dicts = self.instances_to_dict(instances)
         return dicts
 
-    def make_instances(self) -> Dict[str, List[Instance]]:
+    def make_instances(self) -> List[Instance]:
         """ Generate all `Instance`s including `InstanceValue`s """
         n = 3  # generate 3 instances of each entity  # TODO make configurable
-        instances: Dict[str, List[Instance]] = {}
+        instances: List[Instance] = []
         for ename, ent in self.spec["entities"].items():
-            instances[ename] = []
             for i in range(n):
                 instance = ent.make_instance(overrides={})
-                instances[ename].append(instance)
+                instances.append(instance)
         return instances
 
-    def make_relations(self, instances):
+    def make_relations(self, instances: List[Instance]) -> List[Instance]:
         all_instances = instances
-        while any(instances.values()):
-            instances = self.relation_maker.make_relations(
-                instances, all_instances, entities=self.spec["entities"]
-            )
-            for ename, einstances in instances.items():
-                if ename not in all_instances:
-                    all_instances[ename] = []
-                all_instances[ename] += einstances
+        new_instances = all_instances
+        relation_maker = RelationMaker([], self.spec["entities"])
+        while new_instances:
+            relation_maker.update_instances(new_instances)
+            new_instances = relation_maker.make_relations(new_instances)
+            all_instances += new_instances
         return all_instances
 
     def make_plan(self, instances) -> List[InstanceValue]:
         """ Return evaluation order of instance values """
         sorter = TopologicalSorter()
-        for ename, einstances in instances.items():
-            for instance in einstances:
-                for ivalue in instance.instance_values.values():
-                    references = ivalue.resolved_references().values()
-                    dependencies = [ref.resolved_target for ref in references]
-                    sorter.add(ivalue, *dependencies)
+        for instance in instances:
+            for ivalue in instance.instance_values.values():
+                references = ivalue.resolved_references().values()
+                dependencies = [ref.resolved_target for ref in references]
+                sorter.add(ivalue, *dependencies)
         plan = sorter.static_order()
         plan = list(plan)
         return plan
@@ -62,11 +57,13 @@ class Generator:
         for ivalue in plan:
             ivalue.make_value()
 
-    def instances_to_dict(self, instances: Dict[str, List[Instance]]):
-        dicts = {}
-        for ename, einstances in instances.items():
-            edicts = []
-            for instance in einstances:
-                edicts.append(instance.to_dict())
-            dicts[ename] = edicts
+    def instances_to_dict(self, instances: List[Instance]) -> Dict[str, List[Dict]]:
+        dicts: Dict[str, List[Dict]] = {}
+        for instance in instances:
+            ename = instance.entity.name
+            idict = instance.to_dict()
+            try:
+                dicts[ename].append(idict)
+            except KeyError:
+                dicts[ename] = [idict]
         return dicts

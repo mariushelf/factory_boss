@@ -1,3 +1,7 @@
+""" Work in progress for a proper grammar for dynamic field specifications.
+
+Not in use yet."""
+
 value_grammar = r"""
 start : expression
 expression : (reference | literal)+

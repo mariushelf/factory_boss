@@ -1,14 +1,10 @@
 from typing import TYPE_CHECKING, Any, Dict
 
-from faker import Faker
-
 from factory_boss.entity import Entity
 from factory_boss.spec_parser.value_spec_registry import ValueSpecRegistry
 
 if TYPE_CHECKING:
     from factory_boss.value_spec import ValueSpec
-
-fake = Faker()
 
 
 class SpecParser:

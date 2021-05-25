@@ -59,14 +59,19 @@ class RelationMaker:
                 else:
                     return []
             else:
-                raise ConfigurationError(f"Unknown relation_type '{rel_type}'.")
+                raise ConfigurationError(
+                    f"Unknown relation_type. Expected one of "
+                    f"'{RelationSpec.ONE_TO_ONE}', '{RelationSpec.MANY_TO_ONE}' "
+                    f"or '{RelationSpec.ONE_TO_MANY}', but got '{rel_type}'."
+                )
 
     def make_one_to_many_relation(self, rel) -> Optional[Instance]:
         strat = rel.spec.relation_strategy
-        is_new_instance = False
         if strat == "pick_random":
             possible_targets = self.all_instances[rel.spec.target_entity]
             target = self.random_element(possible_targets)
+            rel.override_value(target)
+            return None
         elif strat == "create":
             overrides = rel.spec.relation_overrides
             entity = self.entities[rel.spec.target_entity]
@@ -74,19 +79,14 @@ class RelationMaker:
                 overrides,
                 override_context=rel.owner,
             )
-            is_new_instance = True
+            rel.override_value(target)
+            return target
         else:
             raise ConfigurationError(
                 f"Invalid relation_strategy. "
                 f"Expected one of 'pick_random', 'create', "
                 f"but got '{strat}' instead."
             )
-        rel.override_value(target)
-
-        if is_new_instance:
-            return target
-        else:
-            return None
 
     def resolve_overridden_relation(
         self, rel: InstanceValue, resolver: ReferenceResolver

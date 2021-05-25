@@ -3,34 +3,36 @@ entities:
     fields:
       person_id:
           type: string
-          value_type: id
           primary_key: true
       name:
           type: string
           faker: name
       birthday:
           type: date
-          faker:
-            date_of_birth:
-              minimum_age: 0
-              maximum_age: 115
+          mock:
+            faker:
+              date_of_birth:
+                minimum_age: 0
+                maximum_age: 115
       age:
         type: integer
-        null_rate: .3
-        faker:
-          pyint:
-            min_value: 0
-            max_value: 115
+        mock:
+          null_rate: .3
+          faker:
+            pyint:
+              min_value: 0
+              max_value: 115
       address_string:
           type: string
-          value: $current_address.full_address
+          mock: $current_address.full_address
       current_address:
           type: relation
           relation_type: mt1
           to: Address.address_id
           local_field: address_id
-          relation_strategy: pick_random
           remote_name: persons
+          mock:
+            relation_strategy: pick_random
 #      address_history:
 #          type: relation
 #          to: AdressHistory.id
@@ -42,44 +44,45 @@ entities:
           type: relation
           to: Person.person_id
           relation_type: mt1
-          relation_strategy: create
           remote_name: partner
           local_field: partner_id
-          relation_overrides:
-            current_address: $current_address
-            partner: $SELF
-            age:
-              faker:
-                pyint:
-                  min_value: 18
-                  max_value: 115
+          mock:
+            relation_strategy: create
+            relation_overrides:
+              current_address: $SELF.current_address
+              partner: $SELF
+              age:
+                faker: {pyint: {min_value: 18, max_value: 115}}
   Address:
     fields:
       address_id:
         type: integer
-        faker:
-          pyint:
-            min_value: 0
+        mock:
+          faker:
+            pyint:
+              min_value: 0
       postcode:
         type: string
-        faker: postcode
+        mock:
+          faker: postcode
       postcode4:
         type: string
-        value: $postcode[:4]
+        mock: $postcode[:4]
       street:
         type: string
-        faker: street_name
+        mock:
+          faker: street_name
       housenumber:
         type: integer
-        faker: building_number
+        mock:
+          faker: building_number
       full_address:
         type: string
-        value: $street $housenumber, $postcode
+        mock: $street $housenumber, $postcode
   AddressHistory:
     fields:
       id:
         type: integer
-        value_type: id
         primary_key: True
 #      address:
 #        type: relation

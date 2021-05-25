@@ -1,14 +1,16 @@
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
 
 from faker import Faker
 
-from factory_boss.value_spec import ValueSpec
+if TYPE_CHECKING:
+    from factory_boss.value_spec import ValueSpec
 
 fake = Faker()
 
 
 class Entity:
-    def __init__(self, fields: Dict[str, ValueSpec]):
+    def __init__(self, name: str, fields: Dict[str, "ValueSpec"]):
+        self.name = name
         self.fields = fields
 
     def __str__(self):

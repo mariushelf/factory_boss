@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Any, Dict, List
 
@@ -9,6 +10,9 @@ from factory_boss.errors import (
     UnresolvedReferenceError,
 )
 from factory_boss.instance import Instance, InstanceValue  # , ManyToOneRelationValue
+from factory_boss.spec_parser.value_spec_registry import ValueSpecRegistry
+
+logger = logging.getLogger(__name__)
 
 fake = Faker()
 
@@ -32,6 +36,11 @@ class Reference(CodeToken):
 
     def __repr__(self):
         return str(self)
+
+    def value(self):
+        raise UnresolvedReferenceError(
+            f'Reference to "{self.target}" has not been resolved yet.'
+        )
 
 
 class ResolvedReference(Reference):
@@ -60,7 +69,8 @@ class Literal(CodeToken):
 
 
 class ValueSpec:
-    def __init__(self, type: str):
+    def __init__(self, type: str, name: str = None):
+        self.name = name
         self.type = type
         self._references: List[Reference] = []
 
@@ -76,6 +86,18 @@ class ValueSpec:
     def add_reference(self, ref: Reference):
         self._references.append(ref)
 
+    def derived_fields(self) -> Dict[str, "ValueSpec"]:
+        """Return fields derived from this field.
+
+        An example would be a relation spec, which does not only yield the reference
+        pointer, but also populates the local foreign key column."""
+        return {}
+
+    @classmethod
+    def create(cls, spec: Dict[str, Any], name: str) -> "ValueSpec":
+        """ Generate a value spec from a configuration dictionary. """
+        raise NotImplementedError
+
 
 class Constant(ValueSpec):
     def __init__(self, type, value: Any):
@@ -87,11 +109,23 @@ class Constant(ValueSpec):
 
 
 class DynamicField(ValueSpec):
-    def __init__(self, code, type):
-        super().__init__(type=type)
+    def __init__(self, code, type, name: str = None):
+        super().__init__(type=type, name=name)
         self.code = code
-        self.ast = None
+        self.ast: List[CodeToken] = None
         self.parse()
+
+    @classmethod
+    def create(cls, spec: Dict[str, Any], name: str) -> ValueSpec:
+        if isinstance(spec, dict):
+            type = spec.get("type")
+            mock_info = spec.get("mock")
+            if isinstance(mock_info, dict):
+                return cls(code=mock_info["value"], type=type)
+            else:
+                return cls(code=mock_info, type=type)
+        else:
+            return cls(code=spec, type=None)
 
     def parse(self) -> List:
         ast: List[CodeToken] = []
@@ -124,16 +158,21 @@ class DynamicField(ValueSpec):
         else:
             return "".join([str(v.value()) for v in resolved_ast])
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(code={self.code}, type={self.type}, name={self.name})"
+
 
 class FakerField(ValueSpec):
-    def __init__(self, type: str, faker_func: str, faker_kwargs: Dict = {}):
-        super().__init__(type)
+    def __init__(
+        self, type: str, faker_func: str, faker_kwargs: Dict = {}, name: str = None
+    ):
+        super().__init__(type, name=name)
         self.faker_func = faker_func
         self.faker_kwargs = faker_kwargs
 
     @classmethod
-    def create(cls, spec: Dict):
-        fakespec = spec["faker"]
+    def create(cls, spec: Dict, name: str):
+        fakespec = spec["mock"]["faker"]
         faker_func = None
         faker_kwargs = {}
         if isinstance(fakespec, dict):
@@ -144,7 +183,7 @@ class FakerField(ValueSpec):
                 faker_kwargs = kwargs
         else:
             faker_func = fakespec
-        return FakerField(spec["type"], faker_func, faker_kwargs)
+        return cls(spec.get("type"), faker_func, faker_kwargs)
 
     def generate_value(self, resolved_references):
         f = getattr(fake, self.faker_func)
@@ -158,17 +197,22 @@ class FakerField(ValueSpec):
 
 
 class RelationSpec(ValueSpec):
+    ONE_TO_MANY = "1tm"
+    MANY_TO_ONE = "mt1"
+    ONE_TO_ONE = "1t1"
+
     def __init__(
         self,
-        relation_type,
-        local_field,
-        target_entity,
-        target_key,
-        remote_name,
-        relation_strategy,
+        name: str,
+        relation_type: str,
+        local_field: str,
+        target_entity: str,
+        target_key: str,
+        remote_name: str,
+        relation_strategy: str,
         relation_overrides: Dict[str, ValueSpec],
     ):
-        super().__init__(type="relation")
+        super().__init__(name=name, type="relation")
         self.target_entity = target_entity
         self.local_field = local_field
         self.relation_type = relation_type
@@ -178,14 +222,26 @@ class RelationSpec(ValueSpec):
         self.relation_overrides: Dict[str, ValueSpec] = relation_overrides
 
     @classmethod
-    def create(cls, spec: Dict):
+    def create(cls, spec: Dict, name: str = None):
         relation_type = spec["relation_type"]
+        mock_info = spec.get("mock", {})
         target_entity, target_key = spec["to"].split(".")
         remote_name = spec.get("remote_name", None)
         local_field = spec["local_field"]
-        relation_strategy = spec.get("relation_strategy", "choose_random")
-        relation_overrides = spec.get("relation_overrides", {})
+        relation_strategy = mock_info.get("relation_strategy", "pick_random")
+        relation_overrides_dict = mock_info.get("relation_overrides", {})
+        relation_overrides = {}
+        for k, v in relation_overrides_dict.items():
+            v = {"mock": v}
+            spec_cls = ValueSpecRegistry.value_spec_cls_from_dict(v)
+            specs_from_dict = spec_cls.create(v, k)
+            extra = specs_from_dict.derived_fields()
+            print("EXTRA", extra)
+            relation_overrides[k] = specs_from_dict
+            relation_overrides.update(extra)
+
         return cls(
+            name=name,
             relation_type=relation_type,
             target_entity=target_entity,
             target_key=target_key,
@@ -195,10 +251,42 @@ class RelationSpec(ValueSpec):
             relation_overrides=relation_overrides,
         )
 
-    # def spawn_value(self, name, owner):
-    #     if self.relation_type == "mt1":
-    #         return ManyToOneRelationValue(name=name, spec=self, owner=owner)
-    #     else:
-    #         raise NotImplementedError(
-    #             f'Relation_type "{self.relation_type}" not yet implemented.'
-    #         )
+    def derived_fields(self) -> Dict[str, "ValueSpec"]:
+        if self.relation_type == self.MANY_TO_ONE:
+            print(f"DERIVE {self.local_field} --> ${self.name}.{self.target_key}")
+            return {
+                self.local_field: DynamicField(
+                    code=f"${self.name}.{self.target_key}",
+                    type=None,
+                    name=self.local_field,
+                )
+            }
+        else:
+            return super().derived_fields()
+
+
+class TypeFakerSpec(FakerField):
+    """ Faker for different data types """
+
+    @classmethod
+    def create(cls, spec: Dict, name: str):
+        type = spec["type"]
+        return cls.create_faker_for_type(type, name)
+
+    @classmethod
+    def create_faker_for_type(cls, type: str, name):
+        if type == "integer":
+            return cls(
+                type,
+                "pyint",
+                {"min_value": -1_000_000, "max_value": +1_000_000},
+                name=name,
+            )
+        elif type == "string":
+            return cls(type, "pystr", {"max_chars": 20}, name=name)
+        elif type == "date":
+            return cls(type, "date", name=name)
+        else:
+            # TODO better error handling
+            logger.warning(f'{cls}: unknown type "{type}". Returning Constant(None)')
+            return Constant(type, None)

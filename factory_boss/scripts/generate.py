@@ -3,7 +3,7 @@ from pprint import pprint
 import yaml
 
 from factory_boss.generator import Generator
-from factory_boss.parser import SpecParser
+from factory_boss.spec_parser.parser import SpecParser
 
 if __name__ == "__main__":
     with open("../../examples/simple_schema.yaml", "r") as f:

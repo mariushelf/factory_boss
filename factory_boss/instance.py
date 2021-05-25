@@ -20,9 +20,11 @@ class Instance:
     def value(self, name):
         return self.instance_values[name].make_value()
 
-    def relations(self):
+    def relations(self) -> typing.List["InstanceValue"]:
         return [
-            iv for iv in self.instance_values.values() if iv.spec.type == "relation"
+            self.instance_values[n]
+            for n, spec in self.entity.fields.items()
+            if spec.type == "relation"
         ]
 
     def make_value(self):

@@ -6,7 +6,7 @@ entities:
           primary_key: true
       name:
           type: string
-          faker: name
+          mock: {faker: name}
       birthday:
           type: date
           mock:
@@ -17,7 +17,7 @@ entities:
       age:
         type: integer
         mock:
-          null_rate: .3
+          null_rate: .3  # not implemented yet
           faker:
             pyint:
               min_value: 0

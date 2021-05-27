@@ -1,4 +1,5 @@
 import random
+import re
 from collections import defaultdict
 from typing import Dict, List, Optional
 
@@ -71,13 +72,27 @@ class RelationMaker:
     def make_one_to_many_relation(self, rel: InstanceValue) -> List[Instance]:
         relspec: RelationSpec = rel.spec  # type: ignore
         strat = relspec.relation_strategy
+        create_match = re.match(r"^create\(\s*(?P<a>\d+)(,\s*(?P<b>\d+))?\)$", strat)
         if strat == "pick_random":
             raise ConfigurationError(
                 f"{rel.owner.entity.name}.{rel.name}: 'pick_random' is not a supported strategy "
                 "for a one-to-many relationship, only 'create'"
             )
-        elif strat == "create":
-            n = 2  # TODO read from spec
+        elif create_match:
+            astr = create_match["a"]
+            bstr = create_match["b"]
+            if bstr is None:
+                bstr = astr
+            a = int(astr)
+            b = int(bstr)
+            if b < a:
+                raise ConfigurationError(
+                    f"Lower must be less/equal upper, but {a} > {b}."
+                )
+            if a != b:
+                n = random.randint(a, b)
+            else:
+                n = a
             overrides = relspec.relation_overrides
             entity = self.entities[relspec.target_entity]
             targets = []

@@ -40,7 +40,7 @@ entities:
           remote_name: person
           relation_type: 1tm
           mock:
-            relation_strategy: create  #(0, 5)
+            relation_strategy: create(0, 1)
       partner:
           type: relation
           to: Person.person_id

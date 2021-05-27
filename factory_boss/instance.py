@@ -99,7 +99,6 @@ class InstanceValue:
         return self.spec.references()
 
     def __repr__(self):
-        value_str = ""
         if self.defined:
             if isinstance(self._value, collections.abc.Collection):
                 value_str = f"{len(self._value)} entries"
@@ -129,16 +128,3 @@ class CopiedInstanceValue(InstanceValue):
 
     def resolved_references(self):
         return {self.reference: self.resolved_reference}
-
-
-# class ManyToOneRelationValue(InstanceValue):
-#     def __init__(self, name: str, spec: "RelationSpec", owner: Instance):
-#         super().__init__(name, spec, owner)
-#
-#     # def value(self):
-#     #     return self.remote_instance
-#
-#     def push_value(self):
-#         super().push_value()
-#         self.owner[self.spec.local_field] = self.remote_instance[self.spec.target_key]
-#         # self.remote_instance[self.spec.remote_name] = [self.owner]

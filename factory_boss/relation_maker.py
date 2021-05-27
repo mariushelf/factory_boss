@@ -69,9 +69,38 @@ class RelationMaker:
                 )
 
     def make_one_to_many_relation(self, rel: InstanceValue) -> List[Instance]:
-        # TODO populate properly
-        rel.override_value(rel.spec.default_value())  # type: ignore
-        return []
+        relspec: RelationSpec = rel.spec  # type: ignore
+        strat = relspec.relation_strategy
+        if strat == "pick_random":
+            raise ConfigurationError(
+                f"{rel.owner.entity.name}.{rel.name}: 'pick_random' is not a supported strategy "
+                "for a one-to-many relationship, only 'create'"
+            )
+        elif strat == "create":
+            n = 2  # TODO read from spec
+            overrides = relspec.relation_overrides
+            entity = self.entities[relspec.target_entity]
+            targets = []
+            for _ in range(n):
+                target = entity.make_instance(
+                    overrides,
+                    override_context=rel.owner,
+                )
+                targets.append(target)
+                if relspec.remote_name:
+                    remote = target.instance_values[relspec.remote_name]
+                    remote.override_value(rel.owner)
+            rel.override_value(targets)
+            return targets
+        elif strat == "none":
+            rel.override_value(relspec.default_value())
+            return []
+        else:
+            raise ConfigurationError(
+                f"Invalid relation_strategy. "
+                f"Expected one of 'pick_random', 'create', "
+                f"but got '{strat}' instead."
+            )
 
     def make_many_to_one_relation(self, rel: InstanceValue) -> Optional[Instance]:
         relspec: RelationSpec = rel.spec  # type: ignore

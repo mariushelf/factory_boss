@@ -39,7 +39,8 @@ entities:
           local_field: adress_history_id
           remote_name: person
           relation_type: 1tm
-          relation_strategy: create(0, 5)
+          mock:
+            relation_strategy: create  #(0, 5)
       partner:
           type: relation
           to: Person.person_id

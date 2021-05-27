@@ -50,7 +50,6 @@ entities:
             relation_strategy: create
             relation_overrides:
               current_address: $SELF.current_address
-              partner: $SELF
               age:
                 faker: {pyint: {min_value: 18, max_value: 115}}
   Address:
@@ -67,7 +66,7 @@ entities:
           faker: postcode
       postcode4:
         type: string
-        mock: $postcode[:4]
+        mock: $postcode[:4]  # slicing not yet implemented, slice will be ignored
       street:
         type: string
         mock:

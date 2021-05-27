@@ -327,7 +327,7 @@ class RelationSpec(ValueSpec):
             )
 
     def derived_fields(self) -> Dict[str, "ValueSpec"]:
-        if self.relation_type == self.MANY_TO_ONE:
+        if self.relation_type in (self.MANY_TO_ONE, self.ONE_TO_ONE):
             return {
                 self.local_field: DynamicField(
                     code=f"${self.name}.{self.target_key}",

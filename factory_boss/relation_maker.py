@@ -34,6 +34,10 @@ class RelationMaker:
         resolver = ReferenceResolver()
         all_new_instances = []
         for rel in instance.relations():
+            if rel.defined:
+                # This can happen if the instance is the target of another relation,
+                # and that relation has been defined in a previous iteration
+                continue
             new_instances = self.make_one_relation(rel, resolver)
             all_new_instances += new_instances
         return all_new_instances
@@ -85,6 +89,12 @@ class RelationMaker:
                 override_context=rel.owner,
             )
             rel.override_value(target)
+            if relspec.remote_name:
+                remote = target.instance_values[relspec.remote_name]
+                if relspec.relation_type == RelationSpec.ONE_TO_ONE:
+                    remote.override_value(rel.owner)
+                else:
+                    remote.value().append(rel.owner)
             return target
         elif strat == "none":
             rel.override_value(relspec.default_value())

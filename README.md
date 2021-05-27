@@ -11,7 +11,8 @@ graph TB
     YAML -- load --> Dict --> P
     ES[Entity and Value specifications]
     P(SpecParser) -- generates --> ES
-    ES -- "make_instances()" --> Instances
+    ES -- "make_remote_spec()" --> CS[Complete Specs]
+    CS -- "make_instances()" --> Instances
     IR[Instances with Relations]
     Instances --> make_relations("make_relations()")
     make_relations --> IR

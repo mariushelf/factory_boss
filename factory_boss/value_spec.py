@@ -77,8 +77,7 @@ class ValueSpec:
     def generate_value(
         self, resolved_references: Dict[Reference, ResolvedReference]
     ) -> Any:
-        return None  # TODO raise instead
-        # raise NotImplementedError(f"Not implemented for {self}")
+        raise NotImplementedError(f"Not implemented for {self}")
 
     def references(self) -> List["Reference"]:
         return self._references
@@ -196,6 +195,33 @@ class FakerField(ValueSpec):
 
 
 class RelationSpec(ValueSpec):
+    """Specifies a relation between entities.
+
+    Parameters
+    ----------
+    name : str
+        the name of the relation field, e.g., "parent"
+    relation_type : str
+        one of `ONE_TO_MANY`, `MANY_TO_ONE` or `ONE_TO_ONE`
+    local_field : str
+        name of the key on the local side, e.g., "parent_id"
+    target_entity : str
+        name of the remote entity, e.g., "Person"
+    target_key : str
+        name of the remote key, e.g., "person_id"
+    remote_name : str
+        name of the remote field, e.g., "children"
+    relation_strategy : str
+        specifies how to choose a value during mocking.
+        * "pick_random": choose a random instance of the remote entity;
+        * "create": create a new instance of the remote entity;
+        * "none": do not populate this relation (the remote side should take care
+          of this)
+    relation_overrides : Dict[str, ValueSpec]
+        when `relation_strategy` is "create", this dictionary specifies overrides
+        for fields of the remote instance.
+    """
+
     ONE_TO_MANY = "1tm"
     MANY_TO_ONE = "mt1"
     ONE_TO_ONE = "1t1"
@@ -248,6 +274,57 @@ class RelationSpec(ValueSpec):
             relation_strategy=relation_strategy,
             relation_overrides=relation_overrides,
         )
+
+    def default_value(self):
+        if self.relation_type == self.ONE_TO_MANY:
+            return []
+        else:
+            return None
+
+    def make_remote_spec(self, local_entity: str):
+        if self.relation_strategy == "none":
+            raise ConfigurationError("Cannot make remote spec if strategy is 'none'.")
+        if self.remote_name is None:
+            return None
+
+        if self.relation_type == self.ONE_TO_ONE:
+            if self.target_entity != local_entity:
+                return RelationSpec(
+                    name=self.remote_name,
+                    relation_type=self.ONE_TO_ONE,
+                    local_field=self.target_key,
+                    target_entity=local_entity,
+                    target_key=self.local_field,
+                    remote_name=self.name,
+                    relation_strategy="none",
+                    relation_overrides=None,
+                )
+            else:
+                # it's a one-to-one relation to self,
+                # so the relation already exists by definition
+                return None
+        elif self.relation_type == self.ONE_TO_MANY:
+            return RelationSpec(
+                name=self.remote_name,
+                relation_type=self.MANY_TO_ONE,
+                local_field=self.target_key,
+                target_entity=local_entity,
+                target_key=self.local_field,
+                remote_name=self.name,
+                relation_strategy="none",
+                relation_overrides=None,
+            )
+        elif self.relation_type == self.MANY_TO_ONE:
+            return RelationSpec(
+                name=self.remote_name,
+                relation_type=self.ONE_TO_MANY,
+                local_field=self.target_key,
+                target_entity=local_entity,
+                target_key=self.local_field,
+                remote_name=self.name,
+                relation_strategy="none",
+                relation_overrides=None,
+            )
 
     def derived_fields(self) -> Dict[str, "ValueSpec"]:
         if self.relation_type == self.MANY_TO_ONE:

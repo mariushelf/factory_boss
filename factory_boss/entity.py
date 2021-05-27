@@ -1,9 +1,12 @@
 from typing import TYPE_CHECKING, Dict
 
+from factory_boss.errors import ConfigurationError
 from factory_boss.instance import Instance, InstanceValue
 
 if TYPE_CHECKING:
     from factory_boss.value_spec import ValueSpec
+
+from factory_boss.value_spec import RelationSpec
 
 
 class Entity:
@@ -26,6 +29,12 @@ Fields
     def __repr__(self):
         return f"Entity('{self.name}', {len(self.fields)} fields)"
 
+    def add_field(self, name, field: "ValueSpec"):
+        if name not in self.fields:
+            self.fields[name] = field
+        else:
+            raise ConfigurationError(f"Field '{name}' already defined in {self}")
+
     def make_instance(
         self,
         overrides: Dict[str, "ValueSpec"],
@@ -43,3 +52,6 @@ Fields
             )
             instance.instance_values[fname] = ivalue
         return instance
+
+    def relations(self):
+        return [f for f in self.fields.values() if isinstance(f, RelationSpec)]

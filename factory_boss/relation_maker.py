@@ -47,13 +47,12 @@ class RelationMaker:
         else:
             rel_type = rel.spec.relation_type
             if rel_type == RelationSpec.ONE_TO_MANY:
-                # TODO
-                raise NotImplementedError("1tm relation")
+                return self.make_one_to_many_relation(rel)
             elif (
                 rel_type == RelationSpec.ONE_TO_ONE
                 or rel_type == RelationSpec.MANY_TO_ONE
             ):
-                new_instance = self.make_one_to_many_relation(rel)
+                new_instance = self.make_many_to_one_relation(rel)
                 if new_instance:
                     return [new_instance]
                 else:
@@ -65,22 +64,31 @@ class RelationMaker:
                     f"or '{RelationSpec.ONE_TO_MANY}', but got '{rel_type}'."
                 )
 
-    def make_one_to_many_relation(self, rel) -> Optional[Instance]:
-        strat = rel.spec.relation_strategy
+    def make_one_to_many_relation(self, rel: InstanceValue) -> List[Instance]:
+        # TODO populate properly
+        rel.override_value(rel.spec.default_value())  # type: ignore
+        return []
+
+    def make_many_to_one_relation(self, rel: InstanceValue) -> Optional[Instance]:
+        relspec: RelationSpec = rel.spec  # type: ignore
+        strat = relspec.relation_strategy
         if strat == "pick_random":
-            possible_targets = self.known_instances[rel.spec.target_entity]
+            possible_targets = self.known_instances[relspec.target_entity]
             target = self.random_element(possible_targets)
             rel.override_value(target)
             return None
         elif strat == "create":
-            overrides = rel.spec.relation_overrides
-            entity = self.entities[rel.spec.target_entity]
+            overrides = relspec.relation_overrides
+            entity = self.entities[relspec.target_entity]
             target = entity.make_instance(
                 overrides,
                 override_context=rel.owner,
             )
             rel.override_value(target)
             return target
+        elif strat == "none":
+            rel.override_value(relspec.default_value())
+            return None
         else:
             raise ConfigurationError(
                 f"Invalid relation_strategy. "

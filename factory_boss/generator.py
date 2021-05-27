@@ -1,6 +1,7 @@
 from graphlib import TopologicalSorter
 from typing import Dict, List
 
+from factory_boss.entity import Entity
 from factory_boss.instance import Instance, InstanceValue
 from factory_boss.reference_resolver import ReferenceResolver
 from factory_boss.relation_maker import RelationMaker
@@ -13,6 +14,7 @@ class Generator:
 
     def generate(self) -> Dict[str, List[Dict]]:
         """ Generate a dictionary from entity name to list of generated instances """
+        self.complete_relation_specs(self.spec["entities"])
         instances = self.make_instances()
         instances = self.make_relations(instances)
         self.resolver.resolve_references(instances)
@@ -20,6 +22,16 @@ class Generator:
         self.execute_plan(plan)
         dicts = self.instances_to_dict(instances)
         return dicts
+
+    def complete_relation_specs(self, entities: Dict[str, Entity]):
+        """ Create value specs for the remote side of each relation. """
+        for ename, entity in entities.items():
+            for relation in entity.relations():
+                if relation.relation_strategy != "none":
+                    target = entities[relation.target_entity]
+                    remote_relation = relation.make_remote_spec(ename)
+                    if remote_relation:
+                        target.add_field(relation.remote_name, remote_relation)
 
     def make_instances(self) -> List[Instance]:
         """ Generate all `Instance`s including `InstanceValue`s """

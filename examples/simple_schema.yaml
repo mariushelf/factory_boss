@@ -33,17 +33,17 @@ entities:
           remote_name: persons
           mock:
             relation_strategy: pick_random
-#      address_history:
-#          type: relation
-#          to: AdressHistory.id
-#          local_field: adress_history_id
-#          remote_name: person
-#          relation_type: 1tm
-#          relation_strategy: create(0, 5)
+      address_history:
+          type: relation
+          to: AddressHistory.id
+          local_field: adress_history_id
+          remote_name: person
+          relation_type: 1tm
+          relation_strategy: create(0, 5)
       partner:
           type: relation
           to: Person.person_id
-          relation_type: mt1
+          relation_type: 1t1
           remote_name: partner
           local_field: partner_id
           mock:
@@ -84,11 +84,11 @@ entities:
       id:
         type: integer
         primary_key: True
-#      address:
-#        type: relation
-#        relation_type: 1tm
-#        to: Address.address_id
-#        local_field: address_id
+      address:
+        type: relation
+        relation_type: mt1
+        to: Address.address_id
+        local_field: address_id
       date_start:
         type: date
       date_end:

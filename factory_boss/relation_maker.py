@@ -80,6 +80,15 @@ class RelationMaker:
             possible_targets = self.known_instances[relspec.target_entity]
             target = self.random_element(possible_targets)
             rel.override_value(target)
+            if relspec.remote_name:
+                remote = target.instance_values[relspec.remote_name]
+                if relspec.relation_type == RelationSpec.ONE_TO_ONE:
+                    remote.override_value(rel.owner)
+                else:
+                    if remote.defined:
+                        remote.value().append(rel.owner)
+                    else:
+                        remote.override_value([rel.owner])
             return None
         elif strat == "create":
             overrides = relspec.relation_overrides

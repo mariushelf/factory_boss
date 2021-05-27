@@ -1,3 +1,4 @@
+import collections.abc
 import typing
 from pprint import pformat
 from typing import Dict
@@ -43,6 +44,9 @@ class Instance:
                 value = ivalue.make_value()
                 if isinstance(value, Instance):
                     value = value.to_dict()
+                if isinstance(value, list):
+                    # unwrap relation lists
+                    value = [v.to_dict() for v in value]
                 self._dict[name] = value
         return self._dict
 
@@ -77,8 +81,8 @@ class InstanceValue:
 
     def make_value(self):
         if not self.defined:
-            self._value = self.spec.generate_value(self.resolved_references())
             self.defined = True
+            self._value = self.spec.generate_value(self.resolved_references())
         return self._value
 
     def override_value(self, value):
@@ -95,7 +99,15 @@ class InstanceValue:
         return self.spec.references()
 
     def __repr__(self):
-        return f"InstanceValue_{id(self)}({self.name}, {self._value if self.defined else '<UNDEFINED>'})"
+        value_str = ""
+        if self.defined:
+            if isinstance(self._value, collections.abc.Collection):
+                value_str = f"{len(self._value)} entries"
+            else:
+                value_str = self._value
+        else:
+            value_str = "<UNDEFINED>"
+        return f"InstanceValue_{id(self)}({self.name}, {value_str})"
 
 
 class CopiedInstanceValue(InstanceValue):

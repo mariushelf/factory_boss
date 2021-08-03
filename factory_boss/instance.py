@@ -8,16 +8,17 @@ from typing import Any, Dict
 from factory_boss.errors import UndefinedValueError
 
 if typing.TYPE_CHECKING:
+    from factory_boss.entity import Entity
     from factory_boss.value_spec import Reference, ResolvedReference, ValueSpec
 
 
 class Instance:
     """One instance of an entity, i.e., an object with zero or more fields."""
 
-    def __init__(self, entity):
+    def __init__(self, entity: "Entity"):
         self.entity = entity
         self.instance_values: Dict[str, InstanceValue] = {}
-        self._dict = None
+        self._dict: Dict[str, Any] = None
 
     def ivalue(self, name):
         return self.instance_values[name]
@@ -58,7 +59,10 @@ class Instance:
             self._dict = {}
             for name, ivalue in self.instance_values.items():
                 value = ivalue.make_value()
-                if not with_related_objects and ivalue.spec.type == "relation":
+                if (
+                    not with_related_objects
+                    and self.entity.fields[name].type == "relation"
+                ):
                     continue
                 if isinstance(value, Instance):
                     value = value.to_dict()

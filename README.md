@@ -4,38 +4,50 @@ Fake entire data schemas. Easily.
 
 Original repository: [https://github.com/mariushelf/factory_boss](https://github.com/mariushelf/factory_boss)
 
-# Generation Process
+# Usage
 
-```mermaid
-graph TB
-    YAML -- load --> Dict --> P
-    ES[Entity and Value specifications]
-    P(SpecParser) -- generates --> ES
-    ES -- "make_remote_spec()" --> CS[Complete Specs]
-    CS -- "make_instances()" --> Instances
-    IR[Instances with Relations]
-    Instances --> make_relations("make_relations()")
-    make_relations --> IR
-    make_relations -- can result in --> NI[New Instances]
-    NI --> make_relations
-    IR --> |"resolve_references()"|DAG[DAG / 'Plan']
-    DAG -->|"execute_plan()"| IV[Instances with Values]
-    IV -->|"to_dict()"| DICT[Output Dictionary]
+## Specify a schema
+
+Schemas are specified in yaml, including relationships between entities and mock
+rules.
+
+See [simple_schema.yaml](examples/simple_schema.yaml) for an example.
+
+
+## Generate mock data
+
+
+```python
+from pprint import pprint
+import yaml
+from factory_boss.generator import Generator
+from factory_boss.spec_parser.parser import SpecParser
+
+with open("examples/simple_schema.yaml", "r") as f:
+    schema = yaml.safe_load(f)
+
+parser = SpecParser()
+parsed_spec = parser.parse(schema)
+
+generator = Generator(parsed_spec)
+instances = generator.generate()
+print("INSTANCES")
+print("=========")
+pprint(instances)
 ```
 
-## Entity Specification
-```mermaid
-classDiagram
-Entity *-- Field : contains
-FakerField --|> Field
-Constant --|> Field
-DynamicField --|> Field
-DynamicField ..> Field : references
-```
+See [factory_boss/scripts/generate.py](factory_boss/scripts/generate.py) for
+the full script.
+
 
 # TODO
 
-Much much, above all documentation.
+Much much, above all documentation:
+
+1. documentation
+2. finalize the schema specification
+3. support dynamic fields (generate fields via a Python function with other
+   fields as input)
 
 
 # License

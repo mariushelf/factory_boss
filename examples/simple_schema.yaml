@@ -6,10 +6,13 @@ entities:
           primary_key: true
       name:
           type: string
+          # create mock data for this fields with the `name()` function of faker,
+          # without any arguments
           mock: {faker: name}
       birthday:
           type: date
           mock:
+            # use faker's `date_of_birth()` function with minimum and maximum age arguments
             faker:
               date_of_birth:
                 minimum_age: 0
@@ -17,6 +20,8 @@ entities:
       age:
         type: integer
         mock:
+          # TODO: ability to extract an integer (age) from a date field (birthday).
+          # at the moment, `birthday` and `age` are just to independent random fields.
           null_rate: .3  # not implemented yet
           faker:
             pyint:
@@ -24,14 +29,16 @@ entities:
               max_value: 115
       address_string:
           type: string
+          # fill the address string from the current_address relation
           mock: $current_address.full_address
       current_address:
           type: relation
-          relation_type: mt1
+          relation_type: mt1  # a many-to-one relationship
           to: Address.address_id
           local_field: address_id
           remote_name: persons
           mock:
+            # when generating mock relations, pick a random, existing address
             relation_strategy: pick_random
       address_history:
           type: relation
@@ -40,17 +47,22 @@ entities:
           remote_name: person
           relation_type: 1tm
           mock:
+            # when generating mock relations, create between 0 and 1 new AddressHistory objects
             relation_strategy: create(0, 1)
       partner:
           type: relation
           to: Person.person_id
-          relation_type: 1t1
+          relation_type: 1t1  # one-to-one relationship
           remote_name: partner
           local_field: partner_id
           mock:
+            # when generating mock data, create exactly one new Person object
             relation_strategy: create
             relation_overrides:
+              # Override some fields on the freshly created object:
+              # $SELF refers to the current Person entity. So the partner will have the same address
               current_address: $SELF.current_address
+              # And the age of a partner should be between 18 and 115
               age:
                 faker: {pyint: {min_value: 18, max_value: 115}}
   Address:

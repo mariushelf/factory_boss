@@ -1,3 +1,4 @@
+# this schema is not supported yet. It's more of a showcase for planned features.
 constants:
   NOW:
     value_type: date

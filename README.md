@@ -86,7 +86,7 @@ or pull requests, even though there is no formal "contribution guideline" yet.
 If you want to help just reach out to me :)
 
 
-# Ackknowledgements
+# Acknowledgements
 
 This work wouldn't be possible without the amazing
 [faker](https://github.com/joke2k/faker) package.

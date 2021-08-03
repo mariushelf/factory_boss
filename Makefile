@@ -13,5 +13,5 @@ build:
 	poetry build
 
 # uncomment to push to PyPI
-#publish: test clean build
-#	poetry run python -mtwine upload dist/* --verbose
+publish: test clean build
+	poetry run python -mtwine upload dist/* --verbose

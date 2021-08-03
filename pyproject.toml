@@ -9,7 +9,7 @@ homepage = "https://github.com/mariushelf/factory_boss"
 repository = "https://github.com/mariushelf/factory_boss"
 documentation = "https://github.com/mariushelf/factory_boss"
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",

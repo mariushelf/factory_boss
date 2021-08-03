@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parsed_spec = parser.parse(schema)
 
     generator = Generator(parsed_spec)
-    instances = generator.generate()
+    instances = generator.generate(output_with_related_objects=False)
     print("INSTANCES")
     print("=========")
     pprint(instances)

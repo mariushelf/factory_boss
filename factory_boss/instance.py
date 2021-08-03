@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import collections.abc
 import typing
 from pprint import pformat
-from typing import Dict
+from typing import Any, Dict
 
 from factory_boss.errors import UndefinedValueError
 
@@ -10,6 +12,8 @@ if typing.TYPE_CHECKING:
 
 
 class Instance:
+    """One instance of an entity, i.e., an object with zero or more fields."""
+
     def __init__(self, entity):
         self.entity = entity
         self.instance_values: Dict[str, InstanceValue] = {}
@@ -28,10 +32,22 @@ class Instance:
             if spec.type == "relation"
         ]
 
-    def make_value(self):
-        return self
+    def to_dict(self, with_related_objects: bool = True) -> Dict[str, Any]:
+        """Return all values of this instance as a dictionary.
 
-    def to_dict(self):
+        Parameters
+        ----------
+        with_related_objects : bool, optional
+            if True, related objects are placed into the dictionary. If False,
+            they are not in the dictionary, but only the foreign key is set to the id
+            (if applicable). Default: True
+
+        Returns
+        -------
+        instance_dict : Dict[str, Any]
+            A dictionary representing this instance.
+
+        """
         undefined_values = [n for n, v in self.instance_values.items() if not v.defined]
         if undefined_values:
             raise UndefinedValueError(
@@ -42,6 +58,8 @@ class Instance:
             self._dict = {}
             for name, ivalue in self.instance_values.items():
                 value = ivalue.make_value()
+                if not with_related_objects and ivalue.spec.type == "relation":
+                    continue
                 if isinstance(value, Instance):
                     value = value.to_dict()
                 if isinstance(value, list):
@@ -55,7 +73,11 @@ class Instance:
 
 
 class InstanceValue:
-    """
+    """One field of an instance, i.e., one field.
+
+    It is owned by one instance, has a specification and has a value unless it's
+    undefined.
+
     Parameters:
     -----------
     context : Instance

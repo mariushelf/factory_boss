@@ -12,7 +12,9 @@ class Generator:
         self.spec = spec
         self.resolver = ReferenceResolver()
 
-    def generate(self) -> Dict[str, List[Dict]]:
+    def generate(
+        self, output_with_related_objects: bool = True
+    ) -> Dict[str, List[Dict]]:
         """ Generate a dictionary from entity name to list of generated instances """
         self.complete_relation_specs(self.spec["entities"])
         instances = self.make_instances()
@@ -20,7 +22,9 @@ class Generator:
         self.resolver.resolve_references(instances)
         plan = self.make_plan(instances)
         self.execute_plan(plan)
-        dicts = self.instances_to_dict(instances)
+        dicts = self.instances_to_dict(
+            instances, with_related_objects=output_with_related_objects
+        )
         return dicts
 
     def complete_relation_specs(self, entities: Dict[str, Entity]):
@@ -69,11 +73,13 @@ class Generator:
         for ivalue in plan:
             ivalue.make_value()
 
-    def instances_to_dict(self, instances: List[Instance]) -> Dict[str, List[Dict]]:
+    def instances_to_dict(
+        self, instances: List[Instance], with_related_objects: bool = True
+    ) -> Dict[str, List[Dict]]:
         dicts: Dict[str, List[Dict]] = {}
         for instance in instances:
             ename = instance.entity.name
-            idict = instance.to_dict()
+            idict = instance.to_dict(with_related_objects)
             try:
                 dicts[ename].append(idict)
             except KeyError:

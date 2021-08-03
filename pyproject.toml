@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "factory_boss"
 version = "0.1.0"
-description = "Fake entire data schemas."
+description = "Fake entire data schemas. Easily."
 authors = ["Marius Helf <helfsmarius@gmail.com>"]
 license = "MIT"
 readme = "README.md"
@@ -14,7 +14,8 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: Implementation :: PyPy"
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Programming Language :: Python :: Implementation :: CPython",
 ]
 
 [tool.poetry.dependencies]
@@ -35,5 +36,5 @@ profile = "black"
 multi_line_output = 3
 
 [build-system]
-requires = ["poetry>=1.0"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry-core>=1.0"]
+build-backend = "poetry.core.masonry.api"

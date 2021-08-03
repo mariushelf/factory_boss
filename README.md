@@ -21,6 +21,11 @@ The generated output is a list of dictionaries for each mocked entity, which can
 easily be written to a database, converted to pandas DataFrames etc.
 
 
+# Installation
+
+This package is available on PyPI and can be installed with `pip install factory_boss`.
+
+
 # Usage
 
 Mocking a data schema consists of two steps:

@@ -2,9 +2,32 @@
 
 Fake entire data schemas. Easily.
 
-Original repository: [https://github.com/mariushelf/factory_boss](https://github.com/mariushelf/factory_boss)
+Original repository:
+[https://github.com/mariushelf/factory_boss](https://github.com/mariushelf/factory_boss)
+
+# Use case
+
+Factory Boss can help you whenever you need to mock data schemas, for example when
+you cannot work or develop with the original data for privacy, GDPR related issues
+and security concerns.
+
+# Features
+
+Factory Boss can mock entire data schemas, including relationships and dependencies
+between features and objects.
+
+Schema specifications are read from a simple yaml format.
+The generated output is a list of dictionaries for each mocked entity, which can
+easily be written to a database, converted to pandas DataFrames etc.
+
 
 # Usage
+
+Mocking a data schema consists of two steps:
+
+1. Specify the schema.
+2. Generate data.
+
 
 ## Specify a schema
 
@@ -40,14 +63,39 @@ See [factory_boss/scripts/generate.py](factory_boss/scripts/generate.py) for
 the full script.
 
 
-# TODO
+# Roadmap
 
-Much much, above all documentation:
+Many much, above all documentation.
+
+Here are biggest "milestones":
 
 1. documentation
 2. finalize the schema specification
 3. support dynamic fields (generate fields via a Python function with other
    fields as input)
+
+In the [issues section](https://github.com/mariushelf/factory_boss/issues)
+there are some more tickets.
+
+
+# Contributing
+
+I'm more than happy to accept help in the form of bug reports, feature requests,
+or pull requests, even though there is no formal "contribution guideline" yet.
+
+If you want to help just reach out to me :)
+
+
+# Ackknowledgements
+
+This work wouldn't be possible without the amazing
+[faker](https://github.com/joke2k/faker) package.
+
+Factory Boss is also heavily inspired by
+[factory_boy](https://github.com/FactoryBoy/factory_boy),
+but has a different focus. While factory_boy excels at generating single objects
+and test fixtures, Factory Boss aims at faking entire data schemas. In that sense
+it offers both a subset and a superset of factory_boy's features.
 
 
 # License
@@ -55,4 +103,3 @@ Much much, above all documentation:
 MIT -- see [LICENSE](LICENSE)
 
 Author: Marius Helf ([helfsmarius@gmail.com](mailto:helfsmarius@gmail.com))
-
